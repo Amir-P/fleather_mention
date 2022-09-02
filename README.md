@@ -1,39 +1,91 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Fleather Mention
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages). 
+*It's under development and not production ready yet.*
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages). 
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+Fleather Mention is a plugin to provide @mentions or #hashtag functionality for the Fleather rich text editor.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+* Easy to use
+* Customizable trigger characters
+* Async suggestion list builder
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Add it to your dependencies.
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  fleather: ^1.2.1
+  fleather_mention: ^0.0.1
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+1. Create mention options
 
 ```dart
-const like = 'sample';
+final options = MentionOptions(
+  mentionTriggers: ['@'],
+  suggestionsBuilder: (trigger, query) {
+    final data = ['Android', 'iOS', 'Windows', 'macOs', 'Web', 'Linux'];
+    return data
+        .where((e) => e.toLowerCase().contains(query.toLowerCase()))
+        .map((e) => MentionData(value: e, trigger: trigger))
+        .toList();
+  },
+  itemBuilder: (_, data, __) => Text(data.value),
+);
 ```
 
-## Additional information
+2. Wrap your `FleatherEditor` with `FleatherMention.withEditor`:
 
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+```dart
+@override
+Widget build(BuildContext context) {
+  return FleatherMention.withEditor(
+    options: options,
+    child: FleatherEditor(
+      controller: controller,
+      focusNode: focusNode,
+      editorKey: editorKey,
+      embedBuilder: (context, node) {
+        final mentionWidget = mentionEmbedBuilder(context, node);
+        if (mentionWidget != null) {
+          return mentionWidget;
+        }
+        throw UnimplementedError();
+      },
+    ),
+  );
+}
+```
+or your `FleatherField` with `FleatherMention.withField`:
+```dart
+@override
+Widget build(BuildContext context) {
+  return FleatherMention.withField(
+    options: options,
+    child: FleatherField(
+      controller: controller,
+      focusNode: focusNode,
+      editorKey: editorKey,
+      embedBuilder: (context, node) {
+        final mentionWidget = mentionEmbedBuilder(context, node);
+        if (mentionWidget != null) {
+          return mentionWidget;
+        }
+        throw UnimplementedError();
+      },
+    ),
+  );
+}
+```
+
+## Known issues
+
+* Jumping to new line after selecting mention from suggestions list
+* Not customizable popup
+* Bad design of mention inline embed
