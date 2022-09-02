@@ -1,7 +1,6 @@
 library fleather_mention;
 
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+export 'src/wrapper.dart';
+export 'src/options.dart';
+export 'src/embed_builder.dart';
+export 'src/const.dart';

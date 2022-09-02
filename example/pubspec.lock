@@ -58,7 +58,7 @@ packages:
     source: hosted
     version: "1.3.0"
   fleather:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: fleather
       url: "https://pub.dartlang.org"
