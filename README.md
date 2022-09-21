@@ -18,8 +18,8 @@ Add it to your dependencies.
 dependencies:
   flutter:
     sdk: flutter
-  fleather: ^1.2.1
-  fleather_mention: ^0.0.1
+  fleather: ^1.2.2
+  fleather_mention: ^0.0.2
 ```
 
 ## Usage
@@ -86,6 +86,6 @@ Widget build(BuildContext context) {
 
 ## Known issues
 
-* Jumping to new line after selecting mention from suggestions list
+* ~~Jumping to new line after selecting mention from suggestions list~~
 * Not customizable popup
 * Bad design of mention inline embed

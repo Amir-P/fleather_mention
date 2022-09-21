@@ -1,6 +1,6 @@
 name: fleather_mention
 description: "Mentions for the Fleather rich text editor"
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/Amir-P/fleather_mention
 repository: https://github.com/Amir-P/fleather_mention
 
@@ -11,7 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  fleather: ^1.2.1
+  fleather: ^1.2.2
 
 dev_dependencies:
   flutter_test:
