@@ -22,8 +22,8 @@ class FleatherMention extends StatefulWidget {
   final FocusNode focusNode;
   final GlobalKey<EditorState> editorKey;
 
-  const FleatherMention._({
-    Key? key,
+  const FleatherMention({
+    super.key,
     required this.child,
     required this.controller,
     required this.focusNode,
@@ -31,7 +31,7 @@ class FleatherMention extends StatefulWidget {
     required this.triggers,
     required this.optionsBuilder,
     this.optionsViewBuilder,
-  }) : super(key: key);
+  });
 
   final Iterable<String> triggers;
   final MentionOptionsBuilder optionsBuilder;
@@ -47,7 +47,7 @@ class FleatherMention extends StatefulWidget {
   }) {
     assert(child.focusNode != null);
     assert(child.editorKey != null);
-    return FleatherMention._(
+    return FleatherMention(
       controller: child.controller,
       focusNode: child.focusNode!,
       editorKey: child.editorKey!,
@@ -68,7 +68,7 @@ class FleatherMention extends StatefulWidget {
   }) {
     assert(child.focusNode != null);
     assert(child.editorKey != null);
-    return FleatherMention._(
+    return FleatherMention(
       controller: child.controller,
       focusNode: child.focusNode!,
       editorKey: child.editorKey!,
