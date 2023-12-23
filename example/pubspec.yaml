@@ -11,7 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  fleather: ^1.2.1
+  fleather: ^1.12.0
   fleather_mention:
     path: ../
 

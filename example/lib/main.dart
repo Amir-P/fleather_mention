@@ -26,57 +26,58 @@ class _MyHomePageState extends State<MyHomePage> {
   final controller = FleatherController();
   final focusNode = FocusNode();
   final editorKey = GlobalKey<EditorState>();
-  final options = MentionOptions(
-    mentionTriggers: ['#', '@'],
-    suggestionsBuilder: (trigger, query) {
-      final List<String> data;
-      if (trigger == '#') {
-        data = ['Android', 'iOS', 'Windows', 'macOs', 'Web', 'Linux'];
-      } else {
-        data = ['John', 'Michael', 'Dave', 'Susan', 'Emilia', 'Cathy'];
-      }
-      return data
-          .where((e) => e.toLowerCase().contains(query.toLowerCase()))
-          .map((e) => MentionData(value: e, trigger: trigger))
-          .toList();
-    },
-    itemBuilder: (context, data, query) => ListTile(title: Text(data.value)),
-  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text('Fleather mention demo')),
-        body: Column(
-          children: <Widget>[
-            FleatherToolbar.basic(controller: controller),
-            Divider(height: 1),
-            Expanded(
-              child: FleatherMention.withEditor(
-                options: options,
-                child: _buildEditor(),
+      appBar: AppBar(title: Text('Fleather mention demo')),
+      body: Column(
+        children: <Widget>[
+          FleatherToolbar.basic(controller: controller),
+          Divider(height: 1),
+          Expanded(
+            child: FleatherMention.withEditor(
+              triggers: ['#', '@'],
+              optionsBuilder: (trigger, query) {
+                final List<String> data;
+                if (trigger == '#') {
+                  data = ['Android', 'iOS', 'Windows', 'macOs', 'Web', 'Linux'];
+                } else {
+                  data = [
+                    'John',
+                    'Michael',
+                    'Dave',
+                    'Susan',
+                    'Emilia',
+                    'Cathy'
+                  ];
+                }
+                return data
+                    .where((e) => e.toLowerCase().contains(query.toLowerCase()))
+                    .map((e) => MentionData(value: e, trigger: trigger))
+                    .toList();
+              },
+              child: FleatherEditor(
+                controller: controller,
+                focusNode: focusNode,
+                editorKey: editorKey,
+                embedBuilder: (context, node) {
+                  final mentionWidget = defaultMentionEmbedBuilder(
+                    context,
+                    node,
+                    onTap: (data) => ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text(data.value))),
+                  );
+                  if (mentionWidget != null) {
+                    return mentionWidget;
+                  }
+                  return defaultFleatherEmbedBuilder(context, node);
+                },
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
-
-  FleatherEditor _buildEditor() => FleatherEditor(
-        controller: controller,
-        focusNode: focusNode,
-        editorKey: editorKey,
-        embedBuilder: (context, node) {
-          final mentionWidget = mentionEmbedBuilder(
-            context,
-            node,
-            onTap: (data) => ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(data.value))),
-          );
-          if (mentionWidget != null) {
-            return mentionWidget;
-          }
-          throw UnimplementedError();
-        },
-      );
 }
