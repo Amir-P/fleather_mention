@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:fleather/fleather.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import 'utils.dart';
 
@@ -81,8 +84,26 @@ class FleatherMention extends StatefulWidget {
 }
 
 class _FleatherMentionState extends State<FleatherMention> {
+  final _highlightedOptionIndex = ValueNotifier<int>(0);
+  late final Map<Type, Action<Intent>> _actionMap;
+  late final MentionCallbackAction<AutocompletePreviousOptionIntent>
+      _previousOptionAction;
+  late final MentionCallbackAction<AutocompleteNextOptionIntent>
+      _nextOptionAction;
+  late final MentionCallbackAction<DismissIntent> _hideOptionsAction;
+  late final MentionCallbackAction<ButtonActivateIntent> _submitAction;
+
+  static const Map<ShortcutActivator, Intent> _shortcuts =
+      <ShortcutActivator, Intent>{
+    SingleActivator(LogicalKeyboardKey.arrowUp):
+        AutocompletePreviousOptionIntent(),
+    SingleActivator(LogicalKeyboardKey.arrowDown):
+        AutocompleteNextOptionIntent(),
+    SingleActivator(LogicalKeyboardKey.enter): ButtonActivateIntent(),
+  };
+
   OverlayEntry? _mentionOverlay;
-  bool _hasFocus = false;
+
   String? _lastQuery, _lastTrigger;
 
   FleatherController get _controller => widget.controller;
@@ -96,6 +117,21 @@ class _FleatherMentionState extends State<FleatherMention> {
     super.initState();
     _controller.addListener(_onDocumentUpdated);
     _focusNode.addListener(_onFocusChanged);
+    _previousOptionAction =
+        MentionCallbackAction<AutocompletePreviousOptionIntent>(
+            onInvoke: _highlightPreviousOption);
+    _nextOptionAction = MentionCallbackAction<AutocompleteNextOptionIntent>(
+        onInvoke: _highlightNextOption);
+    _hideOptionsAction =
+        MentionCallbackAction<DismissIntent>(onInvoke: _hideOptions);
+    _submitAction =
+        MentionCallbackAction<ButtonActivateIntent>(onInvoke: _submit);
+    _actionMap = <Type, Action<Intent>>{
+      AutocompletePreviousOptionIntent: _previousOptionAction,
+      AutocompleteNextOptionIntent: _nextOptionAction,
+      DismissIntent: _hideOptionsAction,
+      ButtonActivateIntent: _submitAction,
+    };
   }
 
   @override
@@ -120,9 +156,45 @@ class _FleatherMentionState extends State<FleatherMention> {
     }
   }
 
+  void _submit(_) {
+    _onSelected(_options.elementAt(_highlightedOptionIndex.value));
+  }
+
+  void _updateHighlight(int index) => _highlightedOptionIndex.value =
+      _options.isEmpty ? 0 : index % _options.length;
+
+  void _highlightPreviousOption(_) =>
+      _updateHighlight(_highlightedOptionIndex.value - 1);
+
+  void _highlightNextOption(_) =>
+      _updateHighlight(_highlightedOptionIndex.value + 1);
+
+  Object? _hideOptions(DismissIntent intent) {
+    if (_mentionOverlay != null) {
+      _mentionOverlay?.remove();
+      _mentionOverlay?.dispose();
+      _mentionOverlay = null;
+      _updateActions();
+      return null;
+    }
+    return Actions.invoke(context, intent);
+  }
+
+  void _updateActions() => _setActionsEnabled(
+      _focusNode.hasFocus && _options.isNotEmpty && _mentionOverlay != null);
+
+  void _setActionsEnabled(bool enabled) {
+    _previousOptionAction.enabled = enabled;
+    _nextOptionAction.enabled = enabled;
+    _hideOptionsAction.enabled = enabled;
+    _submitAction.enabled = enabled;
+  }
+
   void _onDocumentUpdated() async {
     await _checkForMentionTriggers();
-    _updateOrDisposeOverlayIfNeeded();
+    _updateOverlay();
+    _updateActions();
+    _updateHighlight(0);
   }
 
   Future<void> _checkForMentionTriggers() async {
@@ -155,19 +227,23 @@ class _FleatherMentionState extends State<FleatherMention> {
   }
 
   void _onFocusChanged() {
-    _hasFocus = _focusNode.hasFocus;
-    _updateOrDisposeOverlayIfNeeded();
+    _updateActions();
+    _updateOverlay();
   }
 
-  void _updateOrDisposeOverlayIfNeeded() {
-    if (!_hasFocus || _options.isEmpty) {
+  void _updateOverlay() {
+    if (!_focusNode.hasFocus || _options.isEmpty) {
       _mentionOverlay?.remove();
       _mentionOverlay?.dispose();
       _mentionOverlay = null;
     } else if (_mentionOverlay == null) {
       _mentionOverlay = OverlayEntry(
-          builder: (context) => (widget.optionsViewBuilder ??
-              _defaultOptionsViewBuilder)(context, _onSelected, _options));
+        builder: (context) => AutocompleteHighlightedOption(
+          highlightIndexNotifier: _highlightedOptionIndex,
+          child: (widget.optionsViewBuilder ?? _defaultOptionsViewBuilder)(
+              context, _onSelected, _options),
+        ),
+      );
       Overlay.of(context,
               rootOverlay: true,
               debugRequiredFor: widget.editorKey.currentWidget)
@@ -190,13 +266,18 @@ class _FleatherMentionState extends State<FleatherMention> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      NotificationListener<ScrollNotification>(
-        onNotification: (_) {
-          _mentionOverlay?.markNeedsBuild();
-          return false;
-        },
-        child: widget.child,
+  Widget build(BuildContext context) => Shortcuts(
+        shortcuts: _shortcuts,
+        child: Actions(
+          actions: _actionMap,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (_) {
+              _mentionOverlay?.markNeedsBuild();
+              return false;
+            },
+            child: widget.child,
+          ),
+        ),
       );
 
   Widget _defaultOptionsViewBuilder(_, onSelected, options) {
@@ -255,23 +336,41 @@ class _MentionSuggestionList extends StatelessWidget {
       left: 16,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: _overlayMaxHeight),
-        child: _buildOverlayWidget(context),
+        child: _buildList(context),
       ),
     );
   }
 
-  Widget _buildOverlayWidget(BuildContext context) => Card(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: suggestions
-                .map((e) => InkWell(
+  Widget _buildList(BuildContext context) {
+    final highlightedIndex = AutocompleteHighlightedOption.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: suggestions
+              .mapIndexed((i, e) => Builder(builder: (context) {
+                    final highlighted = highlightedIndex == i;
+                    if (highlighted) {
+                      SchedulerBinding.instance
+                          .addPostFrameCallback((Duration timeStamp) {
+                        Scrollable.ensureVisible(context, alignment: 0.5);
+                      });
+                    }
+                    return InkWell(
                       onTap: () => onSelected(e),
-                      child: ListTile(title: Text(e.value)),
-                    ))
-                .toList(),
-          ),
+                      child: Container(
+                        color:
+                            highlighted ? Theme.of(context).focusColor : null,
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(e.value),
+                      ),
+                    );
+                  }))
+              .toList(),
         ),
-      );
+      ),
+    );
+  }
 }

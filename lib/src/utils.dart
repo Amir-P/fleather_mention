@@ -1,4 +1,5 @@
 import 'package:fleather/fleather.dart';
+import 'package:flutter/material.dart';
 
 import 'const.dart';
 
@@ -17,4 +18,16 @@ class MentionData {
 
   Map<String, dynamic> toJson() =>
       {...payload, 'value': value, 'trigger': trigger};
+}
+
+class MentionCallbackAction<T extends Intent> extends CallbackAction<T> {
+  MentionCallbackAction({required super.onInvoke, this.enabled = true});
+
+  bool enabled;
+
+  @override
+  bool isEnabled(covariant T intent) => enabled;
+
+  @override
+  bool consumesKey(covariant T intent) => enabled;
 }
