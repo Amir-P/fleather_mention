@@ -1,3 +1,7 @@
+## 0.0.4
+
+* Cancel previous options fetch
+
 ## 0.0.3
 
 * Keyboard navigation between options
