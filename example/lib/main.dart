@@ -38,19 +38,21 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             child: FleatherMention.withEditor(
               triggers: ['#', '@'],
-              optionsBuilder: (trigger, query) {
+              optionsBuilder: (trigger, query) async {
                 final List<String> data;
                 if (trigger == '#') {
                   data = ['Android', 'iOS', 'Windows', 'macOs', 'Web', 'Linux'];
                 } else {
-                  data = [
-                    'John',
-                    'Michael',
-                    'Dave',
-                    'Susan',
-                    'Emilia',
-                    'Cathy'
-                  ];
+                  data = await Future.delayed(
+                      Duration(seconds: 1),
+                      () => [
+                            'John',
+                            'Michael',
+                            'Dave',
+                            'Susan',
+                            'Emilia',
+                            'Cathy'
+                          ]);
                 }
                 return data
                     .where((e) => e.toLowerCase().contains(query.toLowerCase()))

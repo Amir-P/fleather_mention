@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:async/async.dart';
 import 'package:collection/collection.dart';
 import 'package:fleather/fleather.dart';
 import 'package:flutter/material.dart';
@@ -156,9 +157,8 @@ class _FleatherMentionState extends State<FleatherMention> {
     }
   }
 
-  void _submit(_) {
-    _onSelected(_options.elementAt(_highlightedOptionIndex.value));
-  }
+  void _submit(_) =>
+      _onSelected(_options.elementAt(_highlightedOptionIndex.value));
 
   void _updateHighlight(int index) => _highlightedOptionIndex.value =
       _options.isEmpty ? 0 : index % _options.length;
@@ -180,8 +180,8 @@ class _FleatherMentionState extends State<FleatherMention> {
     return Actions.invoke(context, intent);
   }
 
-  void _updateActions() => _setActionsEnabled(
-      _focusNode.hasFocus && _options.isNotEmpty && _mentionOverlay != null);
+  void _updateActions() => scheduleMicrotask(() => _setActionsEnabled(
+      _focusNode.hasFocus && _options.isNotEmpty && _mentionOverlay != null));
 
   void _setActionsEnabled(bool enabled) {
     _previousOptionAction.enabled = enabled;
@@ -190,18 +190,16 @@ class _FleatherMentionState extends State<FleatherMention> {
     _submitAction.enabled = enabled;
   }
 
-  void _onDocumentUpdated() async {
-    await _checkForMentionTriggers();
-    _updateOverlay();
-    _updateActions();
-    _updateHighlight(0);
-  }
+  void _onDocumentUpdated() => _checkForMentionTriggers();
+
+  CancelableOperation? _fetchOptionsFuture;
 
   Future<void> _checkForMentionTriggers() async {
+    _fetchOptionsFuture?.cancel();
     _lastTrigger = null;
     _lastQuery = null;
     _options = [];
-
+    _update();
     if (!_controller.selection.isCollapsed) return;
 
     final plainText = _controller.document.toPlainText();
@@ -222,13 +220,21 @@ class _FleatherMentionState extends State<FleatherMention> {
     _lastTrigger = plainText.substring(
         indexOfLastMentionTrigger, indexOfLastMentionTrigger + 1);
     if (_lastTrigger != null && _lastQuery != null) {
-      _options = await widget.optionsBuilder(_lastTrigger!, _lastQuery!);
+      _fetchOptionsFuture = CancelableOperation.fromValue(
+          widget.optionsBuilder(_lastTrigger!, _lastQuery!));
+      _fetchOptionsFuture?.then((value) {
+        _options = value;
+        _update();
+      });
     }
   }
 
-  void _onFocusChanged() {
-    _updateActions();
+  void _onFocusChanged() => _update();
+
+  void _update() {
     _updateOverlay();
+    _updateActions();
+    _updateHighlight(0);
   }
 
   void _updateOverlay() {
