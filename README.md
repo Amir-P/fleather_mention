@@ -20,7 +20,7 @@ dependencies:
   flutter:
     sdk: flutter
   fleather: ^1.12.0
-  fleather_mention: ^0.0.4
+  fleather_mention: ^0.0.5
 ```
 
 ## Usage

@@ -1,3 +1,7 @@
+## 0.0.5
+
+* Add empty space after mention
+
 ## 0.0.4
 
 * Cancel previous options fetch
