@@ -269,6 +269,13 @@ class _FleatherMentionState extends State<FleatherMention> {
       buildEmbeddableObject(data),
       selection: TextSelection.collapsed(offset: mentionStartIndex + 1),
     );
+    controller.replaceText(
+      mentionStartIndex + 1,
+      0,
+      ' ',
+      selection:
+          TextSelection.collapsed(offset: controller.selection.start + 1),
+    );
   }
 
   @override
